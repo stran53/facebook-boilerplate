@@ -28,15 +28,70 @@
 						scope: 'publish_actions, user_photos, user_videos, photo_upload, video_upload, email'
 					});
 				},
-				getMe : function() {
-					console.log( 'Welcome!  Fetching your information.... ' );
+				getMyInfo : function() {
 					FB.api('/me', function( response ) {
-						console.log( 'Good to see you, ' + response.name + '.' );
-						console.log( response );
-						App.user = response;
-						return App.user;
+						App.user.about = response;
+						return App.user.about;
 					});
-					return App.user;
+					return App.user.about;
+				},
+				getMyPhotos : function( type ) {
+					// values can include 'uploaded', 'tagged', or 'highlighted'
+					var type = type || 'uploaded';
+					FB.api( '/me?fields=photos.type(' + type + ')', function( response ) {
+						App.user.photos = response.photos;
+						return App.user.photos;
+					});
+					return App.user.photos
+				},
+				getMyData : function( data, params ) {
+					// @ todo: check for permissions, that the param passed in exists, and there is data
+					/* showing the url in the api for adding limits, modifiers, etc.
+					trying to figure out how you can pass in a object of params to get anything from the api
+					fields=videos
+						.type(uploaded)
+						.limit(10)
+						.fields(
+							created_time,
+							description,
+							comments
+								.limit(10)
+								.fields(can_remove),
+							likes
+								.fields(can_post),
+							format
+						)
+					for ( var key in params ) {
+					}
+					*/
+					FB.api( '/me?fields=' + data + '.type(' + params.type + ')', function( response ) {
+						console.log( response );
+						App.user[data] = response[data];
+						return App.user[data];
+					});
+					return App.user['data'];
+				},
+				getMyVideos : function( type ) {
+					var type = type || 'uploaded';
+					FB.api( '/me?fields=videos.type(' + type + ')', function( response ) {
+						App.user.videos = response.videos;
+						return App.user.videos;
+					});
+					return App.user.videos;
+				},
+				getMyFriends : function() {
+					FB.api( '/me?fields=friends', function( response ) {
+						App.user.friends = response.friends;
+						return App.user.friends;
+					});
+					return App.user.friends;
+				},
+				getFriendsInfo : function( id ) {
+					FB.api( '/' + id, function( response ) {
+						if ( ! response.error ) {
+							console.log( response );
+						}
+					});
 				}
 			};
 		}());
@@ -61,7 +116,6 @@
 			});
 			FB.getLoginStatus( function( response ) {
 				if ( response.status === 'connected' ) {
-					console.log( 'login connected:', response );
 					// the user is logged in and has authenticated your
 					// app, and response.authResponse supplies
 					// the user's ID, a valid access token, a signed
@@ -69,8 +123,16 @@
 					// and signed request each expire
 					App.settings.accessToken = response.authResponse.accessToken;
 					App.settings.signedRequest = response.authResponse.signedRequest;
+					App.settings.uid = response.authResponse.userID;
+
 					console.log( response, App );
-					FBUtilities.getMe();
+
+					FBUtilities.getMyInfo();
+					FBUtilities.getMyPhotos();
+					FBUtilities.getMyVideos();
+					FBUtilities.getMyFriends();
+					FBUtilities.getFriendsInfo( 10 );
+					// FBUtilities.getMyData( 'videos', { type : 'uploaded' } );
 				} else if ( response.status === 'not_authorized' ) {
 					console.log( 'logged in, not authorized:', response );
 					// the user is logged in to Facebook,
